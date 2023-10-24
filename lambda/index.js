@@ -1,4 +1,4 @@
-const region = 'us-west-2'
+const region = 'us-east-1'
 import crypto from '@aws-crypto/sha256-js'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
 import { SignatureV4 } from '@aws-sdk/signature-v4'

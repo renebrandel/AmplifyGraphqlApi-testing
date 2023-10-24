@@ -4,6 +4,8 @@ import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as logs from 'aws-cdk-lib/aws-logs'
+import * as cognito from 'aws-cdk-lib/aws-cognito'
+import * as cognito_identitypool from '@aws-cdk/aws-cognito-identitypool-alpha';
 
 import { AmplifyGraphqlApi, AmplifyGraphqlDefinition } from '@aws-amplify/graphql-api-construct'
 
@@ -44,6 +46,16 @@ export class TmpCdkAppsyncStack extends cdk.Stack {
     })
     testFunction.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY)
 
+
+    const userPool = new cognito.UserPool(this, "DummyUserPool")
+
+  const identityPool = new cognito_identitypool.IdentityPool(this, 'MyNewIdentityPool', {
+    authenticationProviders: { userPools: [new cognito_identitypool.UserPoolAuthenticationProvider({
+      userPool: userPool,
+      userPoolClient: new cognito.UserPoolClient(this, 'NewWebClient', { userPool }),
+    })] },
+  });
+
     const api = new AmplifyGraphqlApi(this, `${cdk.Stack.of(this).stackName}-gql`, {
       apiName: `${cdk.Stack.of(this).stackName}-gql`,
       definition: AmplifyGraphqlDefinition.fromFiles(path.join(__dirname, "schema.graphql")),
@@ -52,6 +64,11 @@ export class TmpCdkAppsyncStack extends cdk.Stack {
         apiKeyConfig: {
           description: 'default',
           expires: cdk.Duration.days(30)
+        },
+        iamConfig: {
+          identityPoolId: identityPool.identityPoolId,
+          authenticatedUserRole: identityPool.authenticatedRole,
+          unauthenticatedUserRole: identityPool.unauthenticatedRole
         },
         adminRoles: [
           roleLambdaAdmin
@@ -75,9 +92,7 @@ export class TmpCdkAppsyncStack extends cdk.Stack {
       ],
       effect: iam.Effect.ALLOW
     }))
+
     testFunction.addEnvironment('GRAPHQL_URL', api.graphqlUrl)
-
-
-
   }
 }
